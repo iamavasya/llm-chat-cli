@@ -3,9 +3,7 @@ import asyncio
 from src.config import Config
 from src.client import OpenRouterClient
 from src.services import ChatService
-
-def print_separator():
-    print("-" * 50)
+import itertools
 
 async def main():
     print_separator()
@@ -34,8 +32,20 @@ async def main():
                 print("Bye bye!")
                 break
 
-            print("Thinking... ", end="\r")
-            response = await service.ask(user_input)
+            # print("Thinking... ", end="\r")
+
+            loader_task = asyncio.create_task(show_loader())
+
+            try:
+                response = await service.ask(user_input)
+            finally:
+                loader_task.cancel()
+                try:
+                    await loader_task
+                except asyncio.CancelledError:
+                    pass
+
+
             print(f"\rBot: {response}")
             print_separator()
 
@@ -46,6 +56,24 @@ async def main():
         except Exception as e:
             print(f"Error: {e}")
             print_separator()
+
+def print_separator():
+    print("-" * 50)
+
+async def show_loader(text: str = ""):
+    """
+    Async function for showing loader text
+    """
+    spinner = itertools.cycle(['|', '/', '-', '\\'])
+
+    try:
+        while True:
+            sys.stdout.write(f"\r{text}{next(spinner)}")
+            sys.stdout.flush()
+            await asyncio.sleep(0.3)
+    except asyncio.CancelledError:
+        sys.stdout.write("\r" + " " * (len(text) + 5) + "\r")
+        sys.stdout.flush()
 
 if __name__ == "__main__":
     asyncio.run(main())
